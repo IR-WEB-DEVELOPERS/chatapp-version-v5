@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduChat Login</title>
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EduChat">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="stylesheet" href="login.css">
+    <style>
+        /* BUG FIX 11: Loading spinner for the Google button so users
+           know the app is initialising before login.js is ready. */
+        #appLoader {
+            text-align: center;
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 12px;
+            display: none;
+        }
+        #configError {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            color: #c53030;
+            font-size: 0.88rem;
+            text-align: center;
+        }
+        #configError button {
+            margin-top: 8px;
+            padding: 6px 16px;
+            background: #c53030;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .google-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <main class="login-container">
+        <section class="login-card">
+            <div class="app-logo">
+                <h1>EduChat</h1>
+                <p>Connect with your classmates and friends</p>
+            </div>
+
+            <div class="login-form">
+                <h2>Welcome back</h2>
+                <p class="subtitle">Sign in to continue chatting</p>
+
+                <!-- BUG FIX 11: Button is disabled until login.js is loaded
+                     so users can't click before Firebase is ready. -->
+                <button id="googleLogin" class="login-btn google-btn" type="button" disabled>
+                    <span>G</span>
+                    Continue with Google
+                </button>
+
+                <div id="appLoader">Loading…</div>
+
+                <!-- BUG FIX 12: Show a user-friendly error with a Retry button
+                     instead of injecting a raw red paragraph into the body. -->
+                <div id="configError">
+                    <strong>Could not connect to EduChat.</strong><br>
+                    Check your internet connection and try again.
+                    <br>
+                    <button onclick="window.location.reload()">Retry</button>
+                </div>
+
+                <div class="divider">
+                    <span>Secure login</span>
+                </div>
+
+                <div class="email-option">
+                    Google sign-in is currently enabled for EduChat.
+                </div>
+            </div>
+
+            <div class="login-footer">
+                <p>Your chat data is stored securely with Firebase.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script>
+        // BUG FIX 11: Show a loading indicator while fetching config.
+        document.getElementById('appLoader').style.display = 'block';
+
+        // Fetch Firebase config from server (no hardcoded keys), then load login.js
+        fetch('/firebase-config')
+            .then(r => {
+                // BUG FIX 13: The original code called r.json() without checking
+                // r.ok first. A 503 response (SMTP/Firebase not configured) would
+                // parse as JSON with an error key and silently fail downstream.
+                if (!r.ok) throw new Error('Server returned ' + r.status);
+                return r.json();
+            })
+            .then(cfg => {
+                if (!cfg.apiKey || !cfg.projectId) {
+                    throw new Error('Incomplete Firebase config from server');
+                }
+                if (!firebase.apps.length) firebase.initializeApp(cfg);
+
+                // Store config for globals.js on chat.html to reuse
+                window._firebaseConfig = cfg;
+
+                const s = document.createElement('script');
+                s.src = 'login.js';
+                s.onload = () => {
+                    // Only enable button after login.js has fully executed
+                    document.getElementById('appLoader').style.display = 'none';
+                    document.getElementById('googleLogin').disabled = false;
+                };
+                s.onerror = () => {
+                    document.getElementById('appLoader').style.display = 'none';
+                    document.getElementById('configError').style.display = 'block';
+                };
+                document.body.appendChild(s);
+            })
+            .catch(err => {
+                console.error('Failed to load Firebase config:', err);
+                document.getElementById('appLoader').style.display = 'none';
+                document.getElementById('configError').style.display = 'block';
+            });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => {
+                        console.log('✅ SW registered:', reg.scope);
+                        setInterval(() => reg.update(), 60 * 1000);
+                    })
+                    .catch(err => console.warn('SW failed:', err));
+
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data?.type === 'SW_UPDATED') {
+                        window.location.reload();
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
