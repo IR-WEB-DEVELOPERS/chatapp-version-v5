@@ -20,19 +20,14 @@ let otpSendInFlight = false;
 let lastOtpKey = '';
 
 function markLoginVerified(uid) {
-    sessionStorage.setItem(`${LOGIN_VERIFIED_PREFIX}${uid}`, 'true');
-    // BUG FIX 2: Was using localStorage which persists forever.
-    // Switched to sessionStorage so OTP is re-required on new tab/browser session.
+    // Write to localStorage so the session persists across tabs and browser restarts.
+    // Firebase already handles token refresh — we just need to remember that OTP was done.
+    localStorage.setItem(`${LOGIN_VERIFIED_PREFIX}${uid}`, 'true');
     localStorage.setItem('educhat_last_verified_uid', uid);
 }
 
 function isLoginVerified(uid) {
-    // BUG FIX 2 (cont): Check sessionStorage first (current session), then
-    // fall back to localStorage for backward compat during migration.
-    return (
-        sessionStorage.getItem(`${LOGIN_VERIFIED_PREFIX}${uid}`) === 'true' ||
-        localStorage.getItem(`${LOGIN_VERIFIED_PREFIX}${uid}`) === 'true'
-    );
+    return localStorage.getItem(`${LOGIN_VERIFIED_PREFIX}${uid}`) === 'true';
 }
 
 function ensureOtpModal() {
@@ -237,13 +232,17 @@ document.getElementById('googleLogin').onclick = async (e) => {
 };
 
 auth.onAuthStateChanged(user => {
-    if (!user) return;
-
-    // Always redirect if OTP already verified this session
-    if (isLoginVerified(user.uid)) {
-        window.location.href = 'chat.html';
+    if (user && isLoginVerified(user.uid)) {
+        // Already verified — redirect immediately without showing the login page
+        window.location.replace('chat.html');
         return;
     }
+
+    // No verified session — show the login UI
+    const main = document.getElementById('loginMain');
+    if (main) main.style.visibility = 'visible';
+
+    if (!user) return;
 
     // Only send OTP if user explicitly clicked the Google button.
     // Existing Firebase sessions trigger this callback on page load —
