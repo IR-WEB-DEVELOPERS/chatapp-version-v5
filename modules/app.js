@@ -358,10 +358,10 @@ function setupEventListeners() {
     // Direct message send
     const sendBtn  = document.getElementById('sendBtn');
     const msgInput = document.getElementById('msg');
-    if (sendBtn)  sendBtn.addEventListener('click', sendMessage);
+    if (sendBtn)  sendBtn.addEventListener('click', () => window.sendMessage?.());
     if (msgInput) {
         msgInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage?.(); }
         });
         msgInput.addEventListener('input', () => {
             msgInput.style.height = 'auto';
@@ -372,10 +372,10 @@ function setupEventListeners() {
     // Group message send
     const sendGroupBtn  = document.getElementById('sendGroupBtn');
     const groupMsgInput = document.getElementById('groupMsg');
-    if (sendGroupBtn)  sendGroupBtn.addEventListener('click', sendGroupMessage);
+    if (sendGroupBtn)  sendGroupBtn.addEventListener('click', () => window.sendGroupMessage?.());
     if (groupMsgInput) {
         groupMsgInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGroupMessage(); }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendGroupMessage?.(); }
         });
         groupMsgInput.addEventListener('input', () => {
             groupMsgInput.style.height = 'auto';
