@@ -1332,14 +1332,6 @@ async function saveEditedMessage(text, chatType) {
         return false;
     }
 }
-        cancelEdit(barId, inputId);
-        toastManager.show({ icon: null, type: 'success', title: 'Message edited', body: '', duration: 2000 });
-        return true;
-    } catch (e) {
-        console.error('Edit error:', e);
-        return false;
-    }
-}
 
 // ============================================================
 //  FEATURE: Schedule Message
