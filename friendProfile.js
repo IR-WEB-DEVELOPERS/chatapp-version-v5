@@ -324,13 +324,26 @@ const friendProfileViewer = (() => {
             html += '<div class="fp-img-grid">';
             images.forEach(item => {
                 const dateStr = item._date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                // downloadUrl = direct link (usable as img src)
-                // fileUrl = Drive view link (open in browser)
-                const imgSrc  = item.downloadUrl || item.imageURL || item._url;
+
+                // Build embeddable thumbnail URL — Drive thumbnail API works without auth
+                let imgSrc = item.thumbnailUrl || '';
+                if (!imgSrc) {
+                    const urlForId = item.fileUrl || item.downloadUrl || item._url || '';
+                    const idMatch  = urlForId.match(/\/d\/([^/]+)\//) ||
+                                     urlForId.match(/[?&]id=([^&]+)/);
+                    if (idMatch) imgSrc = `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w400`;
+                }
+                if (!imgSrc) imgSrc = item.downloadUrl || item.imageURL || item._url;
+
+                const largeSrc = imgSrc.includes('drive.google.com/thumbnail')
+                    ? imgSrc.replace(/sz=w\d+/, 'sz=w1600')
+                    : imgSrc;
                 const openUrl = item.fileUrl || item.downloadUrl || item._url;
                 html += `
                     <a class="fp-img-thumb" href="${window.escapeAttribute(openUrl)}"
-                       target="_blank" rel="noopener" title="${window.escapeHTML(item._name || dateStr)}">
+                       target="_blank" rel="noopener" title="${window.escapeHTML(item._name || dateStr)}"
+                       data-thumb="${window.escapeAttribute(imgSrc)}"
+                       data-full="${window.escapeAttribute(largeSrc)}">
                         <img src="${window.escapeAttribute(imgSrc)}"
                              alt="${window.escapeHTML(item._name || 'Image')}"
                              loading="lazy"
