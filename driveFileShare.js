@@ -266,19 +266,21 @@ function renderFileMessage(msg, isSent) {
     }
 
     if (isImage) {
-        // Inline image preview
+        // Thumbnail in chat — click opens lightbox (mediaLightbox.js)
         return `
             <div class="file-msg-wrap">
-                <a href="${safeFileUrl}" target="_blank" rel="noopener">
+                <div class="file-msg-img-wrap">
                     <img 
                         src="${safeImgSrc}"
                         alt="${safeFileName}"
                         class="file-msg-image"
                         loading="lazy"
+                        data-full="${safeFileUrl}"
+                        data-download="${safeDownloadUrl}"
                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
                     >
                     <div class="file-msg-image-fallback" style="display:none">🖼️ ${safeFileName}</div>
-                </a>
+                </div>
                 <div class="file-msg-meta">
                     <span class="file-name">${safeFileName}</span>
                     ${sizeStr ? `<span class="file-size">${sizeStr}</span>` : ''}
