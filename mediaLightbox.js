@@ -200,7 +200,7 @@ window.mediaLightbox = (() => {
             const idx       = allImgs.indexOf(img);
 
             const items = allImgs.map(el => ({
-                src:         el.dataset.full || el.src,
+                src:         el.dataset.full  || el.dataset.thumb || el.src,
                 downloadUrl: el.dataset.download || el.dataset.full || el.src,
                 caption:     el.alt || ''
             }));
@@ -221,9 +221,11 @@ window.mediaLightbox = (() => {
 
             const items = allThumbs.map(t => {
                 const img = t.querySelector('img');
+                // img.src is already the embeddable thumbnail — use it for display
+                // t.href is the Drive view link — use only for download fallback
                 return {
-                    src:         img?.src || t.href,
-                    downloadUrl: t.href   || img?.src,
+                    src:         img?.src || '',
+                    downloadUrl: img?.src || t.href || '',
                     caption:     img?.alt || ''
                 };
             });
