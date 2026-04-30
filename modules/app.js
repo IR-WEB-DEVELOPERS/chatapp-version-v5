@@ -16,13 +16,7 @@ const LOGIN_VERIFIED_PREFIX = 'educhat_login_otp_verified_';
 let _appInitialised = false;
 
 function _isLoginVerified(uid) {
-    // BUG FIX 2 (sync with login.js): Check both sessionStorage and
-    // localStorage so existing verified sessions still work after the
-    // sessionStorage migration in login.js.
-    return (
-        sessionStorage.getItem(`${LOGIN_VERIFIED_PREFIX}${uid}`) === 'true' ||
-        localStorage.getItem(`${LOGIN_VERIFIED_PREFIX}${uid}`) === 'true'
-    );
+    return localStorage.getItem(`${LOGIN_VERIFIED_PREFIX}${uid}`) === 'true';
 }
 
 auth.onAuthStateChanged(async (user) => {
@@ -501,6 +495,7 @@ async function logout() {
         friendsPresenceUnsubscribers = [];
         localStorage.removeItem(`${LOGIN_VERIFIED_PREFIX}${currentUser.uid}`);
         localStorage.removeItem('educhat_last_verified_uid');
+        sessionStorage.removeItem(`${LOGIN_VERIFIED_PREFIX}${currentUser.uid}`);
         await auth.signOut();
         window.location.href = 'index.html';
     } catch (error) {
