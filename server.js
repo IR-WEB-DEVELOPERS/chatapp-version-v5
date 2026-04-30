@@ -394,6 +394,93 @@ app.get('/ice-servers', async (req, res) => {
     });
 });
 
+
+// ── Profile preview page — /p/:uid ───────────────────────────
+// Returns HTML with Open Graph meta tags so WhatsApp/Telegram
+// show a rich preview: profile photo + name + QR code.
+// Real users opening in browser see the card and can add contact.
+function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+app.get('/p/:uid', async (req, res) => {
+    const uid  = req.params.uid;
+    const base = req.protocol + '://' + req.get('host');
+
+    let name='EduChat User', username='', photoURL='';
+    let addUrl = base + '/add?uid=' + encodeURIComponent(uid);
+
+    try {
+        if (db) {
+            const snap = await db.collection('users').doc(uid).get();
+            if (snap.exists) {
+                const d  = snap.data();
+                name     = d.name || d.displayName || name;
+                username = d.username || (d.email||'').split('@')[0] || '';
+                photoURL = d.photoURL || d.avatar || '';
+                addUrl   = base + '/add?uid=' + encodeURIComponent(uid) + '&name=' + encodeURIComponent(name);
+            }
+        }
+    } catch(e) { console.warn('[/p/:uid]', e.message); }
+
+    const title   = escHtml(name + ' — EduChat');
+    const desc    = escHtml(username ? 'Add ' + name + ' (@' + username + ') on EduChat' : 'Add ' + name + ' on EduChat');
+    const ogImg   = escHtml(photoURL || base + '/icon-192.png');
+    const qrSrc   = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(addUrl) + '&bgcolor=ffffff&color=111827&margin=10';
+    const initial = escHtml((name||'E').charAt(0).toUpperCase());
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<meta property="og:type"        content="profile">
+<meta property="og:url"         content="${escHtml(base+'/p/'+uid)}">
+<meta property="og:title"       content="${title}">
+<meta property="og:description" content="${desc}">
+<meta property="og:image"       content="${ogImg}">
+<meta property="og:image:width"  content="400">
+<meta property="og:image:height" content="400">
+<meta property="og:site_name"   content="EduChat">
+<meta name="twitter:card"        content="summary">
+<meta name="twitter:title"       content="${title}">
+<meta name="twitter:description" content="${desc}">
+<meta name="twitter:image"       content="${ogImg}">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:#1e293b;border-radius:20px;padding:36px 28px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #6366f1;margin-bottom:16px}
+.av-fallback{width:96px;height:96px;border-radius:50%;background:#6366f1;display:inline-flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;margin-bottom:16px;border:3px solid #818cf8}
+h1{font-size:1.4rem;font-weight:700;margin-bottom:4px}
+.uname{color:#94a3b8;font-size:.9rem;margin-bottom:20px}
+.qr-wrap{background:#fff;border-radius:12px;padding:12px;display:inline-block;margin-bottom:20px}
+.qr-wrap img{display:block;width:180px;height:180px}
+.add-btn{display:block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:600;font-size:1rem}
+.add-btn:hover{background:#4f46e5}
+.hint{color:#64748b;font-size:.75rem;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="card">
+  ${photoURL ? `<img class="avatar" src="${ogImg}" alt="${escHtml(name)}" onerror="this.style.display='none';document.getElementById('avf').style.display='inline-flex'">` : ''}
+  <div class="av-fallback" id="avf" style="${photoURL?'display:none':''}"> ${initial}</div>
+  <h1>${escHtml(name)}</h1>
+  <div class="uname">${username ? '@'+escHtml(username) : 'EduChat'}</div>
+  <div class="qr-wrap"><img src="${escHtml(qrSrc)}" alt="QR Code" width="180" height="180"></div>
+  <a class="add-btn" href="${escHtml(addUrl)}">Add on EduChat</a>
+  <p class="hint">Scan QR or tap button to add contact</p>
+</div>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.setHeader('Cache-Control','public, max-age=300');
+    res.send(html);
+});
+
+
 // ── Instagram oEmbed proxy ────────────────────────────────────
 // Browser can't call Instagram oEmbed directly (CORS), so we proxy it here.
 app.get('/instagram-embed', async (req, res) => {
