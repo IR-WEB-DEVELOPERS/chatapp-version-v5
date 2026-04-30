@@ -254,15 +254,23 @@ function renderFileMessage(msg, isSent) {
     const safeDownloadUrl = escapeAttribute(msg.downloadUrl || msg.fileUrl || '#');
 
     // For images: prefer thumbnailUrl (embeddable), else derive from fileUrl id
-    let safeImgSrc = safeDownloadUrl;
+    let safeImgSrc  = '';
+    let safeLargeSrc = '';
     if (isImage) {
         if (msg.thumbnailUrl) {
-            safeImgSrc = escapeAttribute(msg.thumbnailUrl);
+            safeImgSrc   = escapeAttribute(msg.thumbnailUrl);
+            // Large version: same thumbnail API but bigger
+            safeLargeSrc = escapeAttribute(msg.thumbnailUrl.replace(/sz=w\d+/, 'sz=w1600'));
         } else {
             // Derive file ID from fileUrl and use thumbnail API
             const idMatch = (msg.fileUrl || '').match(/\/d\/([^/]+)\//);
-            if (idMatch) safeImgSrc = escapeAttribute(`https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`);
+            if (idMatch) {
+                safeImgSrc   = escapeAttribute(`https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`);
+                safeLargeSrc = escapeAttribute(`https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1600`);
+            }
         }
+        if (!safeImgSrc) safeImgSrc = safeDownloadUrl;
+        if (!safeLargeSrc) safeLargeSrc = safeImgSrc;
     }
 
     if (isImage) {
@@ -275,7 +283,8 @@ function renderFileMessage(msg, isSent) {
                         alt="${safeFileName}"
                         class="file-msg-image"
                         loading="lazy"
-                        data-full="${safeFileUrl}"
+                        data-thumb="${safeImgSrc}"
+                        data-full="${safeLargeSrc}"
                         data-download="${safeDownloadUrl}"
                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
                     >
