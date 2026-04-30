@@ -43,6 +43,7 @@ window.mediaLightbox = (() => {
                     <div class="mlb-spinner" id="mlbSpinner"></div>
                     <img class="mlb-img" id="mlbImg" alt="" draggable="false">
                     <video class="mlb-video" id="mlbVideo" controls playsinline></video>
+                    <iframe class="mlb-iframe" id="mlbIframe" allowfullscreen></iframe>
                 </div>
                 <button class="mlb-btn mlb-nav mlb-next" id="mlbNext" aria-label="Next">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -108,6 +109,7 @@ window.mediaLightbox = (() => {
 
         const img     = _el.querySelector('#mlbImg');
         const video   = _el.querySelector('#mlbVideo');
+        const iframe  = _el.querySelector('#mlbIframe');
         const spinner = _el.querySelector('#mlbSpinner');
         const caption = _el.querySelector('#mlbCaption');
         const counter = _el.querySelector('#mlbCounter');
@@ -115,38 +117,46 @@ window.mediaLightbox = (() => {
         const prev    = _el.querySelector('#mlbPrev');
         const next    = _el.querySelector('#mlbNext');
 
-        // Reset zoom
         img.classList.remove('mlb-zoomed');
-
-        // Hide/show nav if only 1 item
         prev.style.display = next.style.display = _items.length > 1 ? '' : 'none';
-
         counter.textContent = _items.length > 1 ? `${_idx + 1} / ${_items.length}` : '';
         caption.textContent = item.caption || '';
         dl.href             = item.downloadUrl || item.src || '#';
 
-        const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(item.src || '');
+        // Hide all content elements first
+        img.style.display    = 'none';
+        video.style.display  = 'none';
+        iframe.style.display = 'none';
+        spinner.style.display = 'none';
+        video.src  = '';
+        iframe.src = '';
 
-        if (isVideo) {
-            img.style.display   = 'none';
+        const type = item.type || 'image';
+
+        if (type === 'video-embed' || type === 'pdf-embed') {
+            // Drive iframe embed (PDF preview / video player)
+            spinner.style.display = 'block';
+            iframe.style.display  = 'block';
+            iframe.onload = () => { spinner.style.display = 'none'; };
+            iframe.src    = item.src;
+
+        } else if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(item.src || '')) {
             video.style.display = 'block';
-            spinner.style.display = 'none';
             video.src = item.src;
             video.play().catch(() => {});
-        } else {
-            video.style.display  = 'none';
-            video.src            = '';
-            img.style.display    = 'none';
-            spinner.style.display = 'block';
 
+        } else {
+            // Image
+            spinner.style.display = 'block';
             const tmp = new Image();
             tmp.onload = () => {
                 img.src           = item.src;
+                img.alt           = item.caption || '';
                 img.style.display = 'block';
                 spinner.style.display = 'none';
             };
             tmp.onerror = () => {
-                img.src           = item.src;   // show broken icon
+                img.src           = item.src;
                 img.style.display = 'block';
                 spinner.style.display = 'none';
             };
@@ -181,8 +191,10 @@ window.mediaLightbox = (() => {
         if (!_el) return;
         _el.classList.remove('mlb-visible');
         document.body.style.overflow = '';
-        const video = _el.querySelector('#mlbVideo');
-        if (video) { video.pause(); video.src = ''; }
+        const video  = _el.querySelector('#mlbVideo');
+        const iframe = _el.querySelector('#mlbIframe');
+        if (video)  { video.pause(); video.src = ''; }
+        if (iframe) { iframe.src = ''; }
         if (_onKey) { document.removeEventListener('keydown', _onKey); _onKey = null; }
     }
 
@@ -194,7 +206,6 @@ window.mediaLightbox = (() => {
             if (!img) return;
             e.preventDefault();
 
-            // Collect all images in the current chat container
             const container = img.closest('#chat, #groupChat') || document;
             const allImgs   = [...container.querySelectorAll('.file-msg-image')];
             const idx       = allImgs.indexOf(img);
@@ -206,6 +217,23 @@ window.mediaLightbox = (() => {
             }));
 
             open(items, idx < 0 ? 0 : idx);
+        });
+
+        // ── View buttons on file/image messages (.mlb-open-btn) ─
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.mlb-open-btn');
+            if (!btn) return;
+            e.preventDefault();
+
+            const type = btn.dataset.type || 'image';
+            const src  = btn.dataset.src || btn.dataset.full || btn.dataset.thumb || '';
+
+            open([{
+                src,
+                type,
+                downloadUrl: btn.dataset.download || src,
+                caption:     btn.dataset.caption  || ''
+            }], 0);
         });
 
         // ── Profile media grid (.fp-img-thumb) ────────────────
