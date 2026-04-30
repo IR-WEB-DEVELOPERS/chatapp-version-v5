@@ -53,11 +53,16 @@ const QRManager = (() => {
     // ── Build profile QR data string ─────────────────────────
     function profileQRData(uid, name) {
         const base = window.location.origin || 'https://yourapp.com';
-        return `${base}/add?uid=${uid}&name=${encodeURIComponent(name || '')}`;
+        // /p/:uid generates a rich OG preview page (profile photo + QR)
+        // that WhatsApp, Telegram etc. use for link previews.
+        return `${base}/p/${uid}`;
     }
 
-    // ── Share QR as image ─────────────────────────────────────
-    async function shareQR(containerEl, name) {
+    // ── Share QR as image + profile link ─────────────────────
+    async function shareQR(containerEl, name, uid) {
+        const base        = window.location.origin || '';
+        const profileLink = uid ? `${base}/p/${uid}` : '';
+
         const canvas = containerEl.querySelector('canvas');
         const img    = containerEl.querySelector('img');
         let dataUrl  = null;
@@ -65,33 +70,52 @@ const QRManager = (() => {
         if (canvas) {
             dataUrl = canvas.toDataURL('image/png');
         } else if (img) {
-            // draw img to canvas
             const c = document.createElement('canvas');
-            c.width = img.naturalWidth || 200;
+            c.width  = img.naturalWidth  || 200;
             c.height = img.naturalHeight || 200;
             c.getContext('2d').drawImage(img, 0, 0);
             dataUrl = c.toDataURL('image/png');
         }
 
-        if (!dataUrl) { window.showToast?.('QR not ready yet', 'error'); return; }
-
-        if (navigator.share && navigator.canShare) {
+        // Try Web Share API with both the link and QR image file
+        if (navigator.share) {
+            const shareData = {
+                title: `Add ${name || 'me'} on EduChat`,
+                text:  `Add me on EduChat! ${profileLink}`,
+                url:   profileLink || undefined
+            };
+            if (dataUrl && navigator.canShare) {
+                try {
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const file = new File([blob], `${name || 'profile'}-qr.png`, { type: 'image/png' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ ...shareData, files: [file] });
+                        return;
+                    }
+                } catch(e) { /* fall through to link-only share */ }
+            }
+            // Link-only share (no file)
             try {
-                const blob = await (await fetch(dataUrl)).blob();
-                const file = new File([blob], `${name || 'profile'}-qr.png`, { type: 'image/png' });
-                if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: `${name}'s QR Code` });
-                    return;
-                }
-            } catch (err) { /* fall through to download */ }
+                await navigator.share(shareData);
+                return;
+            } catch(e) { /* fall through to copy */ }
         }
 
-        // Fallback: download
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `${name || 'profile'}-qr.png`;
-        a.click();
-        window.showToast?.('QR image downloaded!', 'success');
+        // Fallback: copy link to clipboard
+        if (profileLink && navigator.clipboard) {
+            await navigator.clipboard.writeText(profileLink);
+            window.toastManager?.show({ icon: null, type: 'success', title: 'Link copied!', body: 'Share it on WhatsApp or any app', duration: 3000 });
+            return;
+        }
+
+        // Last resort: download QR image
+        if (dataUrl) {
+            const a = document.createElement('a');
+            a.href     = dataUrl;
+            a.download = `${name || 'profile'}-qr.png`;
+            a.click();
+            window.toastManager?.show({ icon: null, type: 'success', title: 'QR downloaded!', body: '', duration: 2000 });
+        }
     }
 
     // ── Scanner Modal ─────────────────────────────────────────
