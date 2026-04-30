@@ -2515,6 +2515,13 @@ body {
     text-decoration: none;
     transition: all 0.15s;
     border: 1.5px solid currentColor;
+    cursor: pointer;
+    background: transparent;
+    font-family: inherit;
+    line-height: 1.4;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 .message.sent .file-action-btn {
     color: rgba(255,255,255,0.9);
