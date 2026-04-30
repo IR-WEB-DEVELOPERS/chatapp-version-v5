@@ -133,8 +133,8 @@ window.mediaLightbox = (() => {
 
         const type = item.type || 'image';
 
-        if (type === 'video-embed' || type === 'pdf-embed') {
-            // Drive iframe embed (PDF preview / video player)
+        if (type === 'embed' || type === 'video-embed' || type === 'pdf-embed') {
+            // Drive iframe embed — works for PDF, Docs, Sheets, Slides, video, images
             spinner.style.display = 'block';
             iframe.style.display  = 'block';
             iframe.onload = () => { spinner.style.display = 'none'; };
