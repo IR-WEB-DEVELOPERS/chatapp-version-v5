@@ -295,15 +295,41 @@ function renderFileMessage(msg, isSent) {
                     ${sizeStr ? `<span class="file-size">${sizeStr}</span>` : ''}
                 </div>
                 <div class="file-msg-actions">
-                    <a href="${safeFileUrl}" target="_blank" rel="noopener" class="file-action-btn">👁 View</a>
+                    <button class="file-action-btn mlb-open-btn"
+                        data-thumb="${safeImgSrc}"
+                        data-full="${safeLargeSrc}"
+                        data-download="${safeDownloadUrl}"
+                        data-caption="${safeFileName}">👁 View</button>
                     <a href="${safeDownloadUrl}" target="_blank" rel="noopener" class="file-action-btn">⬇ Download</a>
                 </div>
             </div>
         `;
     }
 
-    // Generic file / PDF
+    // Generic file / PDF / Video
     const icon = isPDF ? '📄' : getFileIcon(mime);
+    const isVideo = mime.startsWith('video/');
+
+    // Extract Drive file ID to build embeddable URLs
+    const fileIdMatch = (msg.fileUrl || '').match(/\/d\/([^/]+)\//);
+    const fileId      = fileIdMatch ? fileIdMatch[1] : '';
+
+    // For video: use the Drive embed player URL
+    const videoEmbedUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
+    // For PDF: same embed URL works
+    const pdfEmbedUrl   = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
+
+    // Decide what "View" does:
+    // image/video → lightbox   PDF → iframe preview in lightbox   other → new tab
+    const viewIsLightbox = isVideo || isPDF;
+    const viewBtnHtml = viewIsLightbox
+        ? `<button class="file-action-btn mlb-open-btn"
+               data-src="${escapeAttribute(isVideo ? videoEmbedUrl : pdfEmbedUrl)}"
+               data-type="${isVideo ? 'video-embed' : 'pdf-embed'}"
+               data-caption="${safeFileName}"
+               data-download="${safeDownloadUrl}">👁 View</button>`
+        : `<a href="${safeFileUrl}" target="_blank" rel="noopener" class="file-action-btn">👁 View</a>`;
+
     return `
         <div class="file-msg-wrap">
             <div class="file-msg-card">
@@ -314,7 +340,7 @@ function renderFileMessage(msg, isSent) {
                 </div>
             </div>
             <div class="file-msg-actions">
-                <a href="${safeFileUrl}" target="_blank" rel="noopener" class="file-action-btn">👁 View</a>
+                ${viewBtnHtml}
                 <a href="${safeDownloadUrl}" target="_blank" rel="noopener" class="file-action-btn">⬇ Download</a>
             </div>
         </div>
