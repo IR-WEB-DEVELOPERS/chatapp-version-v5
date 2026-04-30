@@ -221,11 +221,12 @@ window.mediaLightbox = (() => {
 
             const items = allThumbs.map(t => {
                 const img = t.querySelector('img');
-                // img.src is already the embeddable thumbnail — use it for display
-                // t.href is the Drive view link — use only for download fallback
+                // data-full on the <a> = large thumbnail (embeddable)
+                // data-thumb on the <a> = small thumbnail
+                // img.src = already the small thumbnail
                 return {
-                    src:         img?.src || '',
-                    downloadUrl: img?.src || t.href || '',
+                    src:         t.dataset.full  || t.dataset.thumb || img?.src || '',
+                    downloadUrl: t.dataset.full  || img?.src || '',
                     caption:     img?.alt || ''
                 };
             });
