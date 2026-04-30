@@ -92,7 +92,8 @@ const profileManager = (() => {
                         <div class="profile-qr-wrap" id="profileQrWrap">
                             <div class="profile-qr-box" id="profileQrBox"></div>
                             <div class="profile-qr-actions">
-                                <button class="profile-qr-btn" id="profileQrShareBtn">Share QR</button>
+                                <button class="profile-qr-btn" id="profileQrShareBtn">📤 Share QR</button>
+                                <button class="profile-qr-btn profile-qr-copy" id="profileQrCopyBtn">🔗 Copy Link</button>
                             </div>
                         </div>
                     </div>
@@ -191,10 +192,25 @@ const profileManager = (() => {
                 const qrText = window.QRManager.profileQRData(myUID, user.name || auth.displayName || 'Me');
                 window.QRManager.generateQR(box, qrText, { size: 180 });
             }
+            // Share button — sends profile link + QR image via Web Share / clipboard
             document.getElementById('profileQrShareBtn').onclick = () => {
-                const b = document.getElementById('profileQrBox');
-                window.QRManager.shareQR(b, user.name || auth.displayName || 'Me');
+                const b    = document.getElementById('profileQrBox');
+                const name = user.name || auth.displayName || 'Me';
+                window.QRManager.shareQR(b, name, myUID);
             };
+            // Copy Link button
+            const copyBtn = document.getElementById('profileQrCopyBtn');
+            if (copyBtn) {
+                copyBtn.onclick = async () => {
+                    const link = window.location.origin + '/p/' + myUID;
+                    try {
+                        await navigator.clipboard.writeText(link);
+                        window.toastManager?.show({ icon: null, type: 'success', title: 'Link copied!', body: 'Share it on WhatsApp or any app', duration: 3000 });
+                    } catch {
+                        window.toastManager?.show({ icon: null, type: 'info', title: link, body: 'Copy this link', duration: 5000 });
+                    }
+                };
+            }
         }
     }
 
