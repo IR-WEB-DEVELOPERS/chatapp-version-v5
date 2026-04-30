@@ -306,26 +306,20 @@ function renderFileMessage(msg, isSent) {
         `;
     }
 
-    // Generic file / PDF / Video
+    // Generic file / PDF / Video / Docs — ALL open in lightbox via Drive embed
     const icon = isPDF ? '📄' : getFileIcon(mime);
-    const isVideo = mime.startsWith('video/');
 
-    // Extract Drive file ID to build embeddable URLs
+    // Extract Drive file ID to build embeddable preview URL
     const fileIdMatch = (msg.fileUrl || '').match(/\/d\/([^/]+)\//);
     const fileId      = fileIdMatch ? fileIdMatch[1] : '';
 
-    // For video: use the Drive embed player URL
-    const videoEmbedUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
-    // For PDF: same embed URL works
-    const pdfEmbedUrl   = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
+    // Google Drive /preview works for: PDF, Docs, Sheets, Slides, video, images, etc.
+    const embedUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : '';
 
-    // Decide what "View" does:
-    // image/video → lightbox   PDF → iframe preview in lightbox   other → new tab
-    const viewIsLightbox = isVideo || isPDF;
-    const viewBtnHtml = viewIsLightbox
+    const viewBtnHtml = embedUrl
         ? `<button class="file-action-btn mlb-open-btn"
-               data-src="${escapeAttribute(isVideo ? videoEmbedUrl : pdfEmbedUrl)}"
-               data-type="${isVideo ? 'video-embed' : 'pdf-embed'}"
+               data-src="${escapeAttribute(embedUrl)}"
+               data-type="embed"
                data-caption="${safeFileName}"
                data-download="${safeDownloadUrl}">👁 View</button>`
         : `<a href="${safeFileUrl}" target="_blank" rel="noopener" class="file-action-btn">👁 View</a>`;
